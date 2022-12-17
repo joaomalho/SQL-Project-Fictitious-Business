@@ -1,0 +1,308 @@
+
+# F. Using MySQL, write the queries to retrieve the following information:
+#1. List all the customer’s names, dates, and products or services used/booked/rented/bought by these customers in a range of two dates.
+ # 1.1 Total Sales per costumer per year, per country
+SELECT  customer.CustomerName AS CustomerName 
+	, YEAR(orders.OrderDate) AS OrdersYear
+	, Sum(orders.Quantity) AS NumberOfProducts
+    , count(orders.orderID) AS NumberOfOrders 
+    , companystore.Address AS StoreAddress
+    , country.CountryName AS StoreCountry
+    , sum(product.productprice) AS TotalSalesAmount
+	, companystore.VAT AS VAT
+    , cast(sum(product.productprice)*companystore.VAT AS DECIMAL(11,2))+sum(product.productprice) AS TotalSalesAmountWithVAT
+FROM orders
+LEFT JOIN customer
+	ON orders.customerID = customer.ID
+LEFT JOIN companystore
+	ON companystore.ID = orders.StoreID 
+LEFT JOIN country 
+	ON companystore.CountryID = country.ID
+LEFT JOIN product
+	ON product.productID = Orders.productID
+GROUP BY YEAR(orders.OrderDate)
+	, customer.CustomerName
+    , companystore.Address
+	, companystore.CountryID 
+    , country.CountryName
+    , companystore.VAT
+ORDER BY orders.customerID
+	, YEAR(orders.OrderDate)
+;
+
+#2. List the best three customers /products /services /places (you are free to define the criteria for what means “best”)
+# 2.1 Best as more sales orders disregarding value, per costumer
+SELECT BestOrderCostumerRank.*
+FROM (	
+		SELECT ROW_NUMBER() OVER (ORDER BY COUNT(orders.orderID) DESC) AS BestOrderCustomer
+			, FORMAT(COUNT(orders.orderID),0) AS NumberOfOrders 
+			, FORMAT(SUM(orders.Quantity),0) AS NumberOfProducts
+			, customer.CustomerName AS CustomerName
+			, country.CountryName AS StoreCountry
+			, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSalesAmount
+			, companystore.VAT AS VAT
+			, CONCAT('€', FORMAT(SUM(product.productprice)*companystore.VAT, 2)) AS TotalVAT
+			, CONCAT('€', FORMAT(SUM(product.productprice)*(1+companystore.VAT), 2)) AS TotalSalesAmountWithVAT
+		FROM orders
+		LEFT JOIN customer
+			ON orders.customerID = customer.ID
+		LEFT JOIN companystore
+			ON companystore.ID = orders.StoreID 
+		LEFT JOIN country 
+			ON companystore.CountryID = country.ID
+		LEFT JOIN product
+			ON product.productID = Orders.productID
+		GROUP BY customer.CustomerName
+			, country.CountryName 
+			, companystore.VAT
+		ORDER BY BestOrderCustomer
+			, customer.customerName
+			, country.CountryName 
+			, companystore.VAT
+	) AS BestOrderCostumerRank
+WHERE BestOrderCostumerRank.BestOrderCustomer <= 3
+;
+
+# 2.2 Best as more sales Products disregarding value, per costumer
+
+SELECT BestProductCostumerRank.*
+FROM (
+		SELECT row_number() OVER (ORDER BY count(orders.Quantity) DESC) AS BestProductCustomer
+			, FORMAT(COUNT(orders.orderID),0) AS NumberOfOrders 
+			, FORMAT(SUM(orders.Quantity),0) AS NumberOfProducts
+			, customer.CustomerName AS CustomerName
+			, country.CountryName AS StoreCountry
+			, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSalesAmount
+			, companystore.VAT AS VAT
+			, CONCAT('€', FORMAT(SUM(product.productprice)*companystore.VAT, 2)) AS TotalVAT
+			, CONCAT('€', FORMAT(SUM(product.productprice)*(1+companystore.VAT), 2)) AS TotalSalesAmountWithVAT
+		FROM orders
+		LEFT JOIN customer
+			ON orders.customerID = customer.ID
+		LEFT JOIN companystore
+			ON companystore.ID = orders.StoreID 
+		LEFT JOIN country 
+			ON companystore.CountryID = country.ID
+		LEFT JOIN product
+			ON product.productID = Orders.productID
+		GROUP BY customer.CustomerName
+			, country.CountryName 
+			, companystore.VAT
+		ORDER BY BestProductCustomer
+			, customer.CustomerName
+			, country.CountryName 
+			, companystore.VAT
+	) AS BestProductCostumerRank
+WHERE BestProductCostumerRank.BestProductCustomer <= 3
+;
+
+# 2.3 Best as more sales Sales Amount, per costumer
+SELECT BestBuyerAmountCostumerRank.*
+FROM (
+		SELECT row_number() OVER (ORDER BY sum(product.productprice) DESC) AS BestBuyerAmountCustomer
+			, FORMAT(COUNT(orders.orderID),0) AS NumberOfOrders 
+			, FORMAT(SUM(orders.Quantity),0) AS NumberOfProducts
+			, customer.CustomerName AS CustomerName
+			, country.CountryName AS StoreCountry
+			, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalPurchaseAmount
+			, companystore.VAT AS VAT
+			, CONCAT('€', FORMAT(SUM(product.productprice)*companystore.VAT, 2)) AS TotalVAT
+			, CONCAT('€', FORMAT(SUM(product.productprice)*(1+companystore.VAT), 2)) AS TotalSalesAmountWithVAT
+		FROM orders
+		LEFT JOIN customer
+			ON orders.customerID = customer.ID
+		LEFT JOIN companystore
+			ON companystore.ID = orders.StoreID 
+		LEFT JOIN country 
+			ON companystore.CountryID = country.ID
+		LEFT JOIN product
+			ON product.productID = Orders.productID
+		GROUP BY customer.CustomerName
+			, country.CountryName 
+			, companystore.VAT
+		ORDER BY BestBuyerAmountCustomer
+			, customer.CustomerName
+			, country.CountryName 
+			, companystore.VAT
+	) AS BestBuyerAmountCostumerRank
+WHERE BestBuyerAmountCostumerRank.BestBuyerAmountCustomer <= 3
+;
+
+# 2.4 Best as more sales Sales Amount, per product
+SELECT BestSellerAmountProductRank.*
+FROM (
+		SELECT row_number() OVER (ORDER BY sum(product.productprice) DESC) AS BestSellerAmountProduct
+			, product.productname AS ProductName
+            , FORMAT(COUNT(orders.orderID),0) AS NumberOfOrders 
+			, FORMAT(SUM(orders.Quantity),0) AS NumberOfProducts
+			, country.CountryName AS StoreCountry
+			, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSalesAmount
+			, companystore.VAT AS VAT
+			, CONCAT('€', FORMAT(SUM(product.productprice)*companystore.VAT, 2)) AS TotalVAT
+			, CONCAT('€', FORMAT(SUM(product.productprice)*(1+companystore.VAT), 2)) AS TotalSalesAmountWithVAT
+		FROM orders
+        LEFT JOIN product
+			ON product.productID = Orders.productID
+		LEFT JOIN companystore
+			ON companystore.ID = orders.StoreID 
+		LEFT JOIN country 
+			ON companystore.CountryID = country.ID
+		GROUP BY product.productname
+			, companystore.VAT
+            , country.CountryName
+		ORDER BY BestSellerAmountProduct
+			, product.productname
+			, country.CountryName 
+			, companystore.VAT
+	) AS BestSellerAmountProductRank
+WHERE BestSellerAmountProductRank.BestSellerAmountProduct <= 3
+;
+
+# 2.5 Best as more orders amount, per product
+SELECT BestSellerQuantityProductRank.*
+FROM (
+		SELECT row_number() OVER (ORDER BY sum(orders.quantity) DESC) AS BestSellerQuantityProduct
+			, product.productname AS ProductName
+            , FORMAT(COUNT(orders.orderID),0) AS NumberOfOrders 
+			, FORMAT(SUM(orders.Quantity),0) AS NumberOfProducts
+			, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSalesAmount
+			, CONCAT('€', FORMAT(SUM(product.productprice)*companystore.VAT, 2)) AS TotalVAT
+			, CONCAT('€', FORMAT(SUM(product.productprice)*(1+companystore.VAT), 2)) AS TotalSalesAmountWithVAT
+		FROM orders
+		LEFT JOIN companystore
+			ON companystore.ID = orders.StoreID 
+		LEFT JOIN country 
+			ON companystore.CountryID = country.ID
+		LEFT JOIN product
+			ON product.productID = Orders.productID
+		GROUP BY product.productname
+			, companystore.VAT
+	) AS BestSellerQuantityProductRank
+WHERE BestSellerQuantityProductRank.BestSellerQuantityProduct <= 3
+;
+
+# 2.6 Best as more orders amount, per product, per year
+SELECT row_number() OVER (PARTITION BY YEAR(orders.orderdate) ORDER BY sum(orders.quantity) DESC,(COUNT(orders.orderID)) DESC,SUM(product.productprice) DESC) AS BestSellerQuantityProduct 
+	, productsubcategoryid.productsubcategory AS ProductCategory
+	, FORMAT(COUNT(orders.orderID),0) AS NumberOfOrders 
+	, FORMAT(SUM(orders.Quantity),0) AS NumberOfProducts
+	, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSalesAmount
+	, CONCAT('€', FORMAT(SUM(product.productprice)*companystore.VAT, 2)) AS TotalVAT
+	, CONCAT('€', FORMAT(SUM(product.productprice)*(1+companystore.VAT), 2)) AS TotalSalesAmountWithVAT
+	, YEAR(orders.orderdate) AS YEARs
+FROM orders
+LEFT JOIN companystore
+	ON companystore.ID = orders.StoreID 
+LEFT JOIN country 
+	ON companystore.CountryID = country.ID
+LEFT JOIN product
+	ON product.productID = Orders.productID
+LEFT JOIN productsubcategoryid
+	ON productsubcategoryid.id = product.productsubcategoryID
+GROUP BY productsubcategoryid.productsubcategory
+		, YEAR(orders.orderdate)
+        , companystore.VAT
+ORDER BY YEAR(orders.orderdate)
+;
+
+#3. Get the average amount of sales/bookings/rents/deliveries for a period that involves 2 or more years, as in the following example. This query only returns one record:
+# __________________________________________________________________________________________________________________
+#|PeriodOfSales    | TotalSales (euros) | YearlyAverage (of the given period) | MonthlyAverage (of the given period)|
+#|01/2010 – 10/2021| XXXXX € 			| XXXXX € 							  | XXXX €								|
+#|__________________________________________________________________________________________________________________|
+
+DELIMITER $$
+SET @FirstYear = (SELECT MIN(YEAR(orders.OrderDate)) FROM orders) ;
+SET @SecondYear = (SELECT (MIN(YEAR(orders.OrderDate))+1) FROM orders);
+SET @ThirdYear = (SELECT (MIN(YEAR(orders.OrderDate))+2) FROM orders);
+
+SELECT 'Full Business Period' AS PeriodDescription
+	, CONCAT(MIN(YEAR(orders.OrderDate)),' - ',MAX(YEAR(orders.OrderDate))) AS PeriodBucket 
+	, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSales
+	, CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)), 2)) AS YearlyAVG
+    , CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)) / COUNT( DISTINCT MONTH(orders.OrderDate)), 2)) AS MonthlyAVG
+FROM orders
+LEFT JOIN product
+	ON orders.productID = Orders.productID
+UNION 
+SELECT 'First Period' AS PeriodDescription
+	, CONCAT(@FirstYear,' - ',@SecondYear) AS PeriodBucket 
+	, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSales
+	, CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)), 2)) AS YearlyAVG
+    , CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)) / COUNT( DISTINCT MONTH(orders.OrderDate)), 2)) AS MonthlyAVG
+FROM orders
+LEFT JOIN product
+	ON orders.productID = Orders.productID
+WHERE YEAR(OrderDate) BETWEEN @FirstYear AND @SecondYear 
+UNION 
+SELECT 'Second Period' AS PeriodDescription
+	, CONCAT(@SecondYear,' - ',@ThirdYear) AS PeriodBucket 
+	, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSales
+	, CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)), 2)) AS YearlyAVG
+    , CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)) / COUNT( DISTINCT MONTH(orders.OrderDate)), 2)) AS MonthlyAVG
+FROM orders
+LEFT JOIN product
+	ON orders.productID = Orders.productID
+WHERE YEAR(OrderDate) BETWEEN @SecondYear AND @ThirdYear 
+UNION 
+SELECT '1 Quarter of 1 Year Period' AS PeriodDescription
+	, CONCAT('2019/01/01',' - ','2022/03/31') AS PeriodBucket 
+	, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSales
+	, CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)), 2)) AS YearlyAVG
+    , CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)) / COUNT( DISTINCT MONTH(orders.OrderDate)), 2)) AS MonthlyAVG
+FROM orders
+LEFT JOIN product
+	ON orders.productID = Orders.productID
+WHERE OrderDate BETWEEN '20190101' AND '20220331'
+$$
+DELIMITER ;
+
+#4. Get the total sales/bookings/rents/deliveries by geographical location (city/country).
+SELECT country.CountryName as Location
+	, 'Full Business Period' AS PeriodDescription
+	, CONCAT(MIN(YEAR(orders.OrderDate)),' - ',MAX(YEAR(orders.OrderDate))) AS PeriodBucket 
+	, CONCAT('€', FORMAT(SUM(product.productprice), 2)) AS TotalSales
+	, CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)), 2)) AS YearlyAVG
+    , CONCAT('€', FORMAT(SUM(product.productprice) / COUNT( DISTINCT YEAR(orders.OrderDate)) / COUNT( DISTINCT MONTH(orders.OrderDate)), 2)) AS MonthlyAVG
+FROM orders
+LEFT JOIN product
+	ON orders.productID = Orders.productID
+LEFT JOIN companystore
+	on orders.storeID = companystore.ID
+LEFT JOIN country
+	on companystore.countryID = country.ID
+GROUP BY country.CountryName
+;
+
+#5. List all the locations where products/services were sold, and the product has customer’s ratings (Yes, your ERD must consider that customers can give ratings).
+SELECT 'Business' AS RatingObject
+	, SUM(orders.Quantity) AS NumberSoldProducts
+    , COUNT(orders.orderID) AS NumberOfOrders
+    , COUNT( distinct orders.CustomerID) AS NumberOfCustomers
+	, ROUND(AVG(orders.rating),2) AS Rating
+FROM orders
+UNION
+SELECT 'Portugal Store (Store 1)' AS RatingObject
+	, SUM(orders.Quantity) AS NumberSoldProducts
+    , COUNT(orders.orderID) AS NumberOfOrders
+    , COUNT( distinct orders.CustomerID) AS NumberOfCustomers
+	, ROUND(AVG(orders.rating),2) AS Rating
+FROM orders
+WHERE orders.StoreID = 1
+UNION
+SELECT 'Spain Store (Store 2)' AS RatingObject
+	, SUM(orders.Quantity) AS NumberSoldProducts
+    , COUNT(orders.orderID) AS NumberOfOrders
+    , COUNT( distinct orders.CustomerID) AS NumberOfCustomers
+	, ROUND(AVG(orders.rating),2) AS Rating
+FROM orders
+WHERE orders.StoreID = 2
+UNION
+SELECT 'France Store (Store 3)' AS RatingObject
+	, SUM(orders.Quantity) AS NumberSoldProducts
+    , COUNT(orders.orderID) AS NumberOfOrders
+    , COUNT( distinct orders.CustomerID) AS NumberOfCustomers
+	, ROUND(AVG(orders.rating),2) AS Rating
+FROM orders
+WHERE orders.StoreID = 3
+;
