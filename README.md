@@ -1,4 +1,7 @@
 # SQL_Project
-Fictitious Business
+Fictitious Retail Store in Portugal, Spain and France
 
-Full data base created from 0 with every client interessation automated.
+Full data base created from 0 with every client interaction automated.
+
+
+
