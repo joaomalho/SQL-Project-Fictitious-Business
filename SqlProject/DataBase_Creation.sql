@@ -1,10 +1,3 @@
-#Group 33 Members:
-#Daniel Franco - 20210719
-#João Malho - 20220696
-#Karim Miladi- 20220720
-#Rafael Dinis - 20221643
-#Tomás Vicente – 20221355
-
 DROP SCHEMA IF EXISTS SQLPROJECT_GROUP_33
 ;
 CREATE SCHEMA SQLPROJECT_GROUP_33
