@@ -1,10 +1,3 @@
-#Group 33 Members:
-#Daniel Franco - 20210719
-#João Malho - 20220696
-#Karim Miladi- 20220720
-#Rafael Dinis - 20221643
-#Tomás Vicente – 20221355
-
 # F. Using MySQL, write the queries to retrieve the following information:
 #1. List all the customer’s names, dates, and products or services used/booked/rented/bought by these customers in a range of two dates.
 # 1.1 Total Sales per costumer per year, per country
